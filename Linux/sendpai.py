@@ -24,7 +24,7 @@ import base64
 from pathlib import Path
 
 APP_NAME = "SendPai"
-APP_VERSION = "1.0.0"
+APP_VERSION = "1.1.2"
 PORT = 7777
 
 # === COLORS ===
@@ -52,10 +52,24 @@ def get_local_ip():
 
 
 def get_public_ip():
-    for url in ["https://api.ipify.org", "https://ifconfig.me/ip"]:
+    import ssl
+    # SSL Context der auch in PyInstaller-Bundles funktioniert
+    try:
+        import certifi
+        ctx = ssl.create_default_context(cafile=certifi.where())
+    except ImportError:
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+
+    for url in ["https://api.ipify.org", "https://ifconfig.me/ip", "http://ifconfig.me/ip"]:
         try:
-            with urllib.request.urlopen(url, timeout=5) as r:
-                return r.read().decode().strip()
+            if url.startswith("https"):
+                with urllib.request.urlopen(url, timeout=5, context=ctx) as r:
+                    return r.read().decode().strip()
+            else:
+                with urllib.request.urlopen(url, timeout=5) as r:
+                    return r.read().decode().strip()
         except Exception:
             continue
     return None
