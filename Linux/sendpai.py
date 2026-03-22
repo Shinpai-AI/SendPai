@@ -539,7 +539,7 @@ class SendPaiApp:
         # Lokal sofort anzeigen
         self.root.after(0, lambda: self._set_local_link(local_link))
 
-        # Öffentliche IP braucht länger — parallel laden
+        # Öffentliche IP laden
         public_ip = get_public_ip()
         if public_ip:
             public_link = f"http://{public_ip}:{PORT}"
@@ -547,6 +547,7 @@ class SendPaiApp:
             self.root.after(0, lambda: self._set_public_link(public_link, local_ip))
         else:
             self.public_link = None
+            self.root.after(0, lambda: self._set_public_link_failed(local_ip))
 
     def _set_local_link(self, local_link):
         self.link_entry.configure(state="normal")
@@ -580,6 +581,18 @@ class SendPaiApp:
         self._link_is_local = True
 
         self._log(f"🌐 Internet: {public_link}", "info")
+
+    def _set_public_link_failed(self, local_ip):
+        """Öffentliche IP nicht gefunden — trotzdem Hinweis zeigen."""
+        self.hint_label.configure(
+            text=f"🏠 Gleiches WLAN: Sofort nutzbar!\n"
+                 f"🌐 Übers Internet: Öffentliche IP nicht ermittelt.\n"
+                 f"    Prüfe: https://api.ipify.org im Browser\n"
+                 f"    Dann: http://DEINE-IP:{PORT} als Link nutzen\n"
+                 f"    + Port {PORT} im Router freigeben → {local_ip}\n\n"
+                 f"⚠️ Link nur an den gewünschten Empfänger teilen!",
+            fg=FG_GRAY, justify="left")
+        self._log("🌐 Öffentliche IP nicht ermittelt", "info")
 
     def _stop_sharing(self):
         if self.server:
