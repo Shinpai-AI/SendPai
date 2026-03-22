@@ -1,0 +1,175 @@
+name: Build SendPai
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install pyinstaller yt-dlp
+          sudo apt-get update
+          sudo apt-get install -y libfuse2
+
+      - name: Build Linux Binary
+        run: |
+          cd Linux
+          pyinstaller --onefile --windowed --name="SendPai" \
+            --icon=assets/icon.png \
+            --add-data="assets:assets" \
+            --hidden-import=tkinter \
+            sendpai-gui.py
+
+      - name: Build AppImage
+        run: |
+          # AppImageTool
+          curl -fsSL -o appimagetool https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x appimagetool
+
+          # AppDir
+          mkdir -p SendPai.AppDir/usr/bin/assets
+          cp Linux/dist/SendPai SendPai.AppDir/usr/bin/sendpai
+          chmod +x SendPai.AppDir/usr/bin/sendpai
+          cp Linux/assets/icon.png SendPai.AppDir/usr/bin/assets/
+          cp Linux/assets/icon.png SendPai.AppDir/sendpai.png
+          mkdir -p SendPai.AppDir/usr/share/icons/hicolor/512x512/apps
+          cp Linux/assets/icon.png SendPai.AppDir/usr/share/icons/hicolor/512x512/apps/sendpai.png
+
+          cat > SendPai.AppDir/sendpai.desktop << 'EOF'
+          [Desktop Entry]
+          Name=SendPai
+          Exec=sendpai
+          Icon=sendpai
+          Terminal=false
+          Type=Application
+          Categories=AudioVideo;Music;
+          EOF
+
+          cat > SendPai.AppDir/AppRun << 'EOF'
+          #!/bin/bash
+          HERE="$(dirname "$(readlink -f "$0")")"
+          export PATH="$HOME/.deno/bin:$HOME/.local/bin:$PATH"
+          exec "$HERE/usr/bin/sendpai" "$@"
+          EOF
+          chmod +x SendPai.AppDir/AppRun
+
+          ARCH=x86_64 ./appimagetool SendPai.AppDir SendPai-x86_64.AppImage
+
+      - name: Upload Linux Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: SendPai-Linux
+          path: SendPai-x86_64.AppImage
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install pyinstaller yt-dlp 
+
+
+      - name: Build Windows EXE
+        run: |
+          cd Windows
+          pyinstaller --onefile --windowed --name="SendPai" `
+            --icon=assets/icon.ico `
+            --add-data="assets;assets" `
+            --hidden-import=tkinter `
+            sendpai-gui.py
+        shell: pwsh
+
+      - name: Upload Windows Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: SendPai-Windows
+          path: Windows/dist/SendPai.exe
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install pyinstaller yt-dlp Pillow
+
+      - name: Build macOS App
+        run: |
+          cd MacOS
+          pyinstaller --onedir --windowed --name="SendPai" \
+            --icon=assets/icon.png \
+            --add-data="assets:assets" \
+            --hidden-import=tkinter \
+            sendpai-gui.py
+
+      - name: Create ZIP
+        run: |
+          cd MacOS/dist
+          zip -r ../../SendPai-macOS.zip SendPai.app || zip -r ../../SendPai-macOS.zip SendPai/
+
+      - name: Upload macOS Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: SendPai-macOS
+          path: SendPai-macOS.zip
+
+  release:
+    needs: [build-linux, build-windows, build-macos]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            SendPai-Linux/SendPai-x86_64.AppImage
+            SendPai-Windows/SendPai.exe
+            SendPai-macOS/SendPai-macOS.zip
+          body: |
+            ## 🎵 Deine Musik. Erkannt. Geladen. Für immer deins.
+
+            ### ⬇️ Downloads
+
+            | Plattform | Datei | Anleitung |
+            |-----------|-------|-----------|
+            | 🐧 Linux | `SendPai-x86_64.AppImage` | Doppelklick! |
+            | 🪟 Windows | `SendPai.exe` | Doppelklick! (Python + ffmpeg nötig) |
+            | 🍎 macOS | `SendPai-macOS.dmg/.zip` | Öffnen + in Applications ziehen |
+
+            ### ✨ Features
+            - Erkennt jeden Player (Spotify, VLC, YouTube, Apple Music)
+            - Automatischer Download + Sortierung
+            - Elegante Dark-Theme GUI
+            - Cross-Platform!
+
+            *Made with conviction, not capital.* 🦋
