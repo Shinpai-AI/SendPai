@@ -30,7 +30,7 @@ jobs:
             --icon=assets/icon.png \
             --add-data="assets:assets" \
             --hidden-import=tkinter \
-            sendpai-gui.py
+            sendpai.py
 
       - name: Build AppImage
         run: |
@@ -95,7 +95,7 @@ jobs:
             --icon=assets/icon.ico `
             --add-data="assets;assets" `
             --hidden-import=tkinter `
-            sendpai-gui.py
+            sendpai.py
         shell: pwsh
 
       - name: Upload Windows Artifacts
@@ -125,7 +125,7 @@ jobs:
             --icon=assets/icon.png \
             --add-data="assets:assets" \
             --hidden-import=tkinter \
-            sendpai-gui.py
+            sendpai.py
 
       - name: Create ZIP
         run: |
