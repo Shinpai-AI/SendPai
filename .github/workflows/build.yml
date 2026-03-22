@@ -19,7 +19,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install pyinstaller yt-dlp
+          pip install pyinstaller yt-dlp certifi
           sudo apt-get update
           sudo apt-get install -y libfuse2
 
@@ -30,6 +30,7 @@ jobs:
             --icon=assets/icon.png \
             --add-data="assets:assets" \
             --hidden-import=tkinter \
+            --collect-all certifi \
             sendpai.py
 
       - name: Build AppImage
@@ -85,8 +86,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install pyinstaller yt-dlp 
-
+          pip install pyinstaller yt-dlp certifi
 
       - name: Build Windows EXE
         run: |
@@ -95,6 +95,7 @@ jobs:
             --icon=assets/icon.ico `
             --add-data="assets;assets" `
             --hidden-import=tkinter `
+            --collect-all certifi `
             sendpai.py
         shell: pwsh
 
@@ -116,7 +117,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install pyinstaller yt-dlp Pillow
+          pip install pyinstaller yt-dlp Pillow certifi
 
       - name: Build macOS App
         run: |
@@ -125,6 +126,7 @@ jobs:
             --icon=assets/icon.png \
             --add-data="assets:assets" \
             --hidden-import=tkinter \
+            --collect-all certifi \
             sendpai.py
 
       - name: Create ZIP
